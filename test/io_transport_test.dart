@@ -55,12 +55,13 @@ void main() {
           securityContext: trust,
           proxy: proxied
               ? DohSocksProxy(InternetAddress.loopbackIPv4, proxy.port)
-              : null);
+              : null,
+          destination: proxied ? InternetAddress('8.8.8.8') : null);
       final response = await get(transport).result;
       expect(response.body, wireReply(), reason: 'returned as received');
       expect(requests, 1);
       if (proxied) {
-        expect(proxy.target, 'localhost');
+        expect(proxy.target, '8.8.8.8');
         transport.close();
         await proxy.disconnected.future.timeout(const Duration(seconds: 2));
       }

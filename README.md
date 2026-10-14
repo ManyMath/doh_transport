@@ -50,6 +50,9 @@ cancellation reason, and keep any lower-layer `cause` without printing it.
 
 - `proxy`: a `DohSocksProxy` with a numeric address. Its `isolationToken`
   becomes SOCKS credentials, giving Tor stream isolation.
+- `destination`: connect every request to this address, directly or through
+  the proxy, so the endpoint host is never resolved. TLS still authenticates
+  the URI host, so the address must serve its certificate.
 - `reuseConnections`: share one connection per origin for wire queries. On by
   default without a proxy, off with one, where a shared connection lets the
   resolver link lookups. GET requests never share connections.

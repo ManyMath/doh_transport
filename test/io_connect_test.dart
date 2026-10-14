@@ -46,7 +46,13 @@ void main() {
   }
 
   final paths = <String, Future<(IoDohTransport, String)> Function()>{
-    'direct': () async =>
+    'direct to a destination': () async => (
+          IoDohTransport(
+              destination: InternetAddress.loopbackIPv4,
+              connectionTimeout: timeout),
+          'resolver.example'
+        ),
+    'direct without a destination': () async =>
         (IoDohTransport(connectionTimeout: timeout), '127.0.0.1'),
     'through SOCKS': () async {
       final proxy = TunnelProxy(upstreamPort: silent.port);

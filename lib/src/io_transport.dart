@@ -32,6 +32,12 @@ class DohSocksProxy {
 /// [maxQueuedRequests] waiting operations. Call [close] when done.
 class IoDohTransport implements DohTransport, DohWireTransport {
   final DohSocksProxy? proxy;
+
+  /// Connects every request to this address, directly or through the [proxy],
+  /// so the endpoint host is never resolved locally or by the proxy. It applies
+  /// to all endpoints used with this transport; TLS still verifies the
+  /// requested host name.
+  final InternetAddress? destination;
   final SecurityContext? securityContext;
 
   /// Creates each lane's HTTP client inside that lane's zone. For tests: the
@@ -70,6 +76,7 @@ class IoDohTransport implements DohTransport, DohWireTransport {
   final _random = Random.secure();
   IoDohTransport(
       {this.proxy,
+      this.destination,
       this.securityContext,
       this.httpClientFactory,
       this.connectionTimeout = const Duration(seconds: 5),
@@ -80,6 +87,9 @@ class IoDohTransport implements DohTransport, DohWireTransport {
       this.padQueries = true,
       bool? reuseConnections})
       : reuseConnections = reuseConnections ?? proxy == null {
+    if (destination?.type == InternetAddressType.unix) {
+      throw ArgumentError('A numeric IP destination is required');
+    }
     if (connectionTimeout <= Duration.zero ||
         requestTimeout <= Duration.zero ||
         idleTimeout <= Duration.zero ||
@@ -250,13 +260,13 @@ class IoDohTransport implements DohTransport, DohWireTransport {
     return lane;
   }
 
-  /// Opens a TLS connection for [uri] through the [proxy], or directly. Each
-  /// path owns the [connectionTimeout] deadline and reports it as
-  /// [DohConnectionTimeoutException].
+  /// Opens a TLS connection for [uri] through the [proxy], or directly, to
+  /// [destination] when set. Each path owns the [connectionTimeout] deadline
+  /// and reports it as [DohConnectionTimeoutException].
   ConnectionTask<Socket> _connect(Uri uri) {
     final proxy = this.proxy;
     if (proxy == null) {
-      return connectTls(uri.host, uri.port,
+      return connectTls(destination ?? uri.host, uri.port,
           tlsHost: uri.host,
           context: securityContext,
           timeout: connectionTimeout);
@@ -264,7 +274,7 @@ class IoDohTransport implements DohTransport, DohWireTransport {
     final task = SocksConnection.start(
         proxyHost: proxy.host,
         proxyPort: proxy.port,
-        targetHost: uri.host,
+        targetHost: destination?.address ?? uri.host,
         targetPort: uri.port,
         tlsHost: uri.host,
         securityContext: securityContext,

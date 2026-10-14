@@ -1,0 +1,12 @@
+name: doh_transport
+description: Bounded DNS over HTTPS transport with RFC 8484 wire POST and GET over direct or SOCKS5 connections.
+version: 0.0.1
+repository: https://github.com/cypherstack/doh_transport
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+dependencies:
+  socks_socket: ^2.0.0
+dev_dependencies:
+  lints: ^5.0.0
+  pointycastle: ^4.0.0
+  test: ^1.25.0

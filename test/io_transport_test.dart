@@ -86,6 +86,20 @@ void main() {
     expect(requests, 0);
     expect(proxy.connections, 1);
   });
+  test('a proxy needs a numeric address, a valid port and a valid token', () {
+    final ip = InternetAddress.loopbackIPv4;
+    for (final port in [0, 65536]) {
+      expect(() => DohSocksProxy(ip, port), throwsArgumentError);
+    }
+    expect(
+        () => DohSocksProxy(
+            InternetAddress('/s', type: InternetAddressType.unix), 9050),
+        throwsArgumentError);
+    expect(
+        () => DohSocksProxy(ip, 9050, isolationToken: ''), throwsArgumentError);
+    expect(DohSocksProxy(ip, 65535, isolationToken: 'a').port, 65535);
+  });
+
   test('HTTPS identity must be trusted', () async {
     server.listen((r) => r.response.close(), onError: (Object _) {});
     await expectLater(

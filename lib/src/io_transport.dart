@@ -9,7 +9,8 @@ import 'tls_connection.dart';
 import 'transport.dart';
 import 'wire.dart';
 
-/// A SOCKS5 proxy, addressed numerically so no local DNS lookup is needed.
+/// A SOCKS5 proxy, addressed numerically so no local DNS lookup is needed;
+/// a Unix-domain [host] or a [port] outside 1–65535 throws [ArgumentError].
 /// An [isolationToken] is sent as SOCKS credentials, which Tor uses for stream
 /// isolation; a token that is empty or longer than 255 UTF-8 bytes throws
 /// [ArgumentError].
@@ -21,7 +22,12 @@ class DohSocksProxy {
   DohSocksProxy(this.host, this.port, {this.isolationToken})
       : _credentials = isolationToken == null
             ? null
-            : SocksCredentials.isolation(isolationToken);
+            : SocksCredentials.isolation(isolationToken) {
+    if (host.type == InternetAddressType.unix) {
+      throw ArgumentError('A numeric IP proxy address is required');
+    }
+    if (port < 1 || port > 65535) throw ArgumentError.value(port, 'port');
+  }
 }
 
 /// A `dart:io` HTTPS/1.1 DoH transport, direct or through SOCKS5.

@@ -127,6 +127,42 @@ void main() {
     expect(response.age, const Duration(seconds: 17));
   });
 
+  test('reports a 2xx status other than 200', () async {
+    for (final status in [204, 206]) {
+      final fake = FakeDohHttpClient(
+        reply: (_, body) => wireEcho(body),
+        scripts: [FakeDohHttpScript(statusCode: status)],
+      );
+      await expectLater(
+        transport(fake)
+            .startWire(endpoint, wireQuery(), maxResponseBytes: 65535)
+            .result,
+        throwsA(isA<DohHttpStatusException>()
+            .having((error) => error.statusCode, 'statusCode', status)),
+      );
+    }
+  });
+
+  test('close fails running, queued and later operations', () async {
+    final fake = FakeDohHttpClient(
+      reply: (_, body) => wireEcho(body),
+      scripts: const [FakeDohHttpScript(hang: true)],
+    );
+    final t = transport(fake, concurrent: 1);
+    final closed = throwsA(isA<DohCancelledException>().having(
+        (error) => error.reason,
+        'reason',
+        DohCancellationReason.transportClosed));
+    final running = t.startWire(endpoint, wireQuery(), maxResponseBytes: 512);
+    final queued = t.startWire(endpoint, wireQuery(), maxResponseBytes: 512);
+    t.close();
+    await expectLater(running.result, closed);
+    await expectLater(queued.result, closed);
+    await expectLater(
+        t.startWire(endpoint, wireQuery(), maxResponseBytes: 512).result,
+        closed);
+  });
+
   test('hung response reaches request timeout and is aborted', () async {
     final fake = FakeDohHttpClient(
       reply: (_, body) => wireEcho(body),
